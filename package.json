@@ -29,18 +29,21 @@
     "@nestjs/jwt": "^10.1.0",
     "@nestjs/passport": "^10.0.0",
     "@nestjs/platform-express": "^10.0.3",
+    "@nestjs/typeorm": "^10.0.0",
     "@vendia/serverless-express": "^4.10.4",
     "aws-cdk-lib": "^2.184.1",
     "aws-lambda": "^1.0.7",
     "aws-serverless-express": "^3.4.0",
     "class-validator": "^0.14.1",
     "helmet": "^7.0.0",
+    "mysql2": "^3.0.0",
     "passport": "^0.6.0",
     "passport-http": "^0.3.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.3",

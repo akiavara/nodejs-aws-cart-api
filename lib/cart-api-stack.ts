@@ -3,6 +3,10 @@ import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as path from 'path';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 export class CartApiStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
@@ -16,9 +20,24 @@ export class CartApiStack extends cdk.Stack {
       memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        NODE_ENV: 'dev',
+        NODE_ENV: 'production',
+        DB_HOST: process.env.DB_HOST || '',
+        DB_PORT: process.env.DB_PORT || '3306',
+        DB_NAME: process.env.DB_NAME || '',
+        DB_USERNAME: process.env.DB_USERNAME || '',
+        DB_PASSWORD: process.env.DB_PASSWORD || '',
+        AWS_REGION: this.region,
       },
     });
+
+    // Grant permissions to access RDS
+    handler.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['rds-db:connect', 'rds:DescribeDBInstances'],
+        resources: ['*'], // You might want to restrict this to specific RDS ARN
+      }),
+    );
 
     // Create a new lambda function
     /*const handler = new DockerImageFunction(this, 'CartApiDockerHandler', {
