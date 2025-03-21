@@ -13,6 +13,9 @@ DROP TABLE IF EXISTS product CASCADE;
 -- Drop the users table
 DROP TABLE IF EXISTS users CASCADE;
 
+-- Drop the orders table
+DROP TABLE IF EXISTS orders CASCADE;
+
 -- Drop the statuses enum type
 DROP TYPE IF EXISTS statuses CASCADE;
 

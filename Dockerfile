@@ -1,7 +1,7 @@
 FROM amazon/aws-lambda-nodejs
 
 COPY . .
-RUN npm install
+RUN npm install --production
 RUN npm run build
 
-CMD ["dist/src/main.lambda.handler"]
+CMD ["dist/src/mainlambda.handler"]

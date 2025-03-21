@@ -17,7 +17,9 @@ import { Stock } from './products/models/stock.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     TypeOrmModule.forRoot(databaseConfig),
     TypeOrmModule.forFeature([Product, Stock]),
     AuthModule,

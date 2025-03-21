@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-//import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
+import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as path from 'path';
@@ -14,9 +14,10 @@ export class CartApiStack extends cdk.Stack {
 
     // Lambda function
     const handler = new lambda.Function(this, 'CartApiLambdaHandler', {
+      functionName: 'NestJsCartLambdaHandler_Classic',
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'dist/src/mainlambda.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda-build')),
+      handler: 'main.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../dist')),
       memorySize: 1024,
       timeout: cdk.Duration.seconds(30),
       environment: {
@@ -26,9 +27,15 @@ export class CartApiStack extends cdk.Stack {
         DB_NAME: process.env.DB_NAME || '',
         DB_USERNAME: process.env.DB_USERNAME || '',
         DB_PASSWORD: process.env.DB_PASSWORD || '',
-        AWS_REGION: this.region,
       },
     });
+
+    // Create a new lambda function
+    /*const handler = new DockerImageFunction(this, 'CartApiDockerHandler', {
+      timeout: cdk.Duration.seconds(30),
+      functionName: 'NestJsCartLambdaHandler_Docker',
+      code: DockerImageCode.fromImageAsset(path.join(__dirname, '../')), // Location of the Dockerfile
+    });*/
 
     // Grant permissions to access RDS
     handler.addToRolePolicy(
@@ -38,13 +45,6 @@ export class CartApiStack extends cdk.Stack {
         resources: ['*'], // You might want to restrict this to specific RDS ARN
       }),
     );
-
-    // Create a new lambda function
-    /*const handler = new DockerImageFunction(this, 'CartApiDockerHandler', {
-      timeout: cdk.Duration.seconds(30),
-      functionName: 'Nest Js Cart Lambda Handler (Docker)',
-      code: DockerImageCode.fromImageAsset(path.join(__dirname, '../')), // Location of the Dockerfile
-    });*/
 
     // API Gateway
     const api = new apigateway.RestApi(this, 'CartApi', {
