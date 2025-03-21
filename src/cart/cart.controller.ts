@@ -9,14 +9,17 @@ import {
   HttpStatus,
   HttpCode,
   BadRequestException,
+  Param,
 } from '@nestjs/common';
 import { BasicAuthGuard } from '../auth';
-import { Order, OrderService } from '../order';
 import { AppRequest, getUserIdFromRequest } from '../shared';
 import { calculateCartTotal } from './models-rules';
 import { CartService } from './services';
 import { CartItem } from './models';
 import { CreateOrderDto, PutCartPayload } from 'src/order/type';
+import { Orders } from 'src/order/models/orders.entity';
+import { OrderService } from 'src/order/services/order.service';
+import { DeleteResult } from 'typeorm';
 
 @Controller('profile/cart')
 export class CartController {
@@ -95,7 +98,19 @@ export class CartController {
 
   @UseGuards(BasicAuthGuard)
   @Get('order')
-  getOrder(): Order[] {
+  async getOrder(): Promise<Orders[]> {
     return this.orderService.getAll();
+  }
+
+  @UseGuards(BasicAuthGuard)
+  @Get('order/:order_id')
+  async getOneOrder(@Param('order_id') orderId: string): Promise<Orders> {
+    return this.orderService.findById(orderId);
+  }
+
+  @UseGuards(BasicAuthGuard)
+  @Delete('order/:order_id')
+  async deleteOrder(@Param('order_id') orderId: string): Promise<DeleteResult> {
+    return this.orderService.delete(orderId);
   }
 }

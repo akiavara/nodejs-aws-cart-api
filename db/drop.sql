@@ -18,6 +18,3 @@ DROP TABLE IF EXISTS orders CASCADE;
 
 -- Drop the statuses enum type
 DROP TYPE IF EXISTS statuses CASCADE;
-
--- Drop the uuid-ossp extension
-DROP EXTENSION IF EXISTS "uuid-ossp";

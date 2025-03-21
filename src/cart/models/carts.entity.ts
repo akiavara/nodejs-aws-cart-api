@@ -1,14 +1,19 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
 import { CartItems } from './cart-items.entity';
 import { CartStatuses } from '.';
+import { Users } from 'src/users/models/users.entity';
 
 @Entity('carts')
 export class Carts {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Column({ type: 'varchar', length: 255 })
-  user_id: string;
 
   @Column({ name: 'created_at', type: 'timestamp', default: () => 'NOW()' })
   createdAt!: string;
@@ -22,6 +27,10 @@ export class Carts {
     default: CartStatuses.OPEN,
   })
   status: CartStatuses;
+
+  @ManyToOne(() => Users, (user) => user.carts, { onDelete: 'CASCADE' }) // Define the ManyToOne relationship
+  @JoinColumn({ name: 'user_id', referencedColumnName: 'id' }) // Map the user_id column
+  user: Users;
 
   @OneToMany(() => CartItems, (item) => item.cart, { cascade: true })
   items: CartItems[];

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Carts as CartEntity } from '../models/carts.entity';
 import { CartItems as CartItemsEntity } from '../models/cart-items.entity';
+import { Users as UsersEntity } from 'src/users/models/users.entity';
 
 @Injectable()
 export class CartService {
@@ -13,13 +14,16 @@ export class CartService {
     private readonly cartRepository: Repository<CartEntity>,
     @InjectRepository(CartItemsEntity)
     private readonly cartItemRepository: Repository<CartItemsEntity>,
+    @InjectRepository(UsersEntity)
+    private readonly userRepository: Repository<UsersEntity>,
   ) {}
 
   async findByUserId(userId: string): Promise<CartEntity> {
     // TODO: REMOVE IT AND USE CORRECT USER_ID
     const user_id_hardcoded = '6f1fc7a7-d12b-43fa-bacf-b42a19021c9f';
     const userCart = await this.cartRepository.findOne({
-      where: { user_id: user_id_hardcoded },
+      //where: { user_id: user_id_hardcoded },
+      where: { user: { id: user_id_hardcoded } },
       relations: {
         items: {
           product: true,
@@ -34,8 +38,19 @@ export class CartService {
     console.log('createByUserId', user_id);
     // TODO: REMOVE IT AND USE CORRECT USER_ID
     const user_id_hardcoded = '6f1fc7a7-d12b-43fa-bacf-b42a19021c9f';
+
+    // Find the user by their ID
+    const user = await this.userRepository.findOne({
+      where: { id: user_id_hardcoded },
+    });
+
+    // If the user does not exist, throw an error
+    if (!user) {
+      throw new Error(`User with ID ${user_id} not found`);
+    }
+
     const userCart = this.cartRepository.create({
-      user_id: user_id_hardcoded,
+      user: user,
       items: [],
       status: CartStatuses.OPEN,
     });

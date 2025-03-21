@@ -8,11 +8,12 @@ import { CartService } from './services';
 
 import { Carts as CartEntity } from './models/carts.entity';
 import { CartItems as CartItemEntity } from './models/cart-items.entity';
+import { Users as UsersEntity } from 'src/users/models/users.entity';
 
 @Module({
   imports: [
     OrderModule,
-    TypeOrmModule.forFeature([CartEntity, CartItemEntity]),
+    TypeOrmModule.forFeature([CartEntity, CartItemEntity, UsersEntity]),
   ],
   providers: [CartService],
   controllers: [CartController],
