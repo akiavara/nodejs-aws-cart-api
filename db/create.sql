@@ -40,8 +40,15 @@ CREATE TABLE orders (
     id UUID NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     payment JSON NOT NULL,
-    delivery JSON NOT NULL,
+    address JSON NOT NULL,
     comments TEXT,
     status order_statuses not null,
     total NUMERIC(10, 2) NOT NULL CHECK (total >= 0)
+);
+
+CREATE TABLE order_items (
+    id UUID NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+    order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES product(id) ON DELETE CASCADE,
+    count INTEGER NOT NULL CHECK (count > 0)
 );

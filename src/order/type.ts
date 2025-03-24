@@ -1,3 +1,6 @@
+import { Product } from 'src/cart/models';
+import { OrderItem } from './models/order-items.entity';
+
 export enum OrderStatus {
   Open = 'OPEN',
   Approved = 'APPROVED',
@@ -32,7 +35,7 @@ export type PutCartPayload = {
 export type CreateOrderPayload = {
   userId: string;
   cartId: string;
-  items: Array<{ productId: string; count: number }>;
+  items: Array<{ product: Product; count: number }>;
   address: Address;
   total: number;
 };

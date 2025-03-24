@@ -4,9 +4,11 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { OrderStatus } from '../type';
 import { Users } from 'src/users/models/users.entity';
+import { OrderItem } from './order-items.entity';
 
 @Entity('orders')
 export class Orders {
@@ -21,7 +23,7 @@ export class Orders {
   payment: Record<string, any>; // JSON field for payment details
 
   @Column({ type: 'json' })
-  delivery: Record<string, any>; // JSON field for delivery details
+  address: Record<string, any>; // JSON field for address details
 
   @Column({ type: 'text', nullable: true })
   comments: string; // Optional comments field
@@ -31,6 +33,9 @@ export class Orders {
     enum: OrderStatus, // Enum for statuses
   })
   status: OrderStatus;
+
+  @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
+  items: OrderItem[];
 
   @Column({ type: 'numeric', precision: 10, scale: 2 })
   total: number; // Total amount for the order

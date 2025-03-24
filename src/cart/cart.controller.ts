@@ -82,7 +82,7 @@ export class CartController {
       userId,
       cartId,
       items: items.map(({ product, count }) => ({
-        productId: product.id,
+        product,
         count,
       })),
       address: body.address,
