@@ -13,6 +13,9 @@ export class Users {
   @Column({ type: 'varchar', length: 255 })
   password: string;
 
+  @Column({ type: 'boolean', default: false })
+  is_admin: boolean;
+
   @OneToMany(() => Carts, (cart) => cart.user, { cascade: true }) // Reference the user property in Carts
   carts: Carts[];
 

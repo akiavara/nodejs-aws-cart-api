@@ -18,7 +18,8 @@ CREATE TABLE stock (
 create table users (
     id UUID not null default uuid_generate_v4() primary key,
     name varchar(255) not null,
-    password varchar(255) not null
+    password varchar(255) not null,
+    is_admin BOOLEAN NOT NULL DEFAULT false
 );
 
 create table carts (

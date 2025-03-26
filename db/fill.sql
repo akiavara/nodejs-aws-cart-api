@@ -2,12 +2,12 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Insert 5 users
-INSERT INTO users (id, name, password) VALUES
-('6f1fc7a7-d12b-43fa-bacf-b42a19021c9f', 'User 1', 'TEST_PASSWORD'),
-(uuid_generate_v4(), 'User 2', 'TEST_PASSWORD'),
-(uuid_generate_v4(), 'User 3', 'TEST_PASSWORD'),
-(uuid_generate_v4(), 'User 4', 'TEST_PASSWORD'),
-(uuid_generate_v4(), 'User 5', 'TEST_PASSWORD');
+INSERT INTO users (id, name, password, is_admin) VALUES
+(uuid_generate_v4(), 'johndoe', 'TEST_PASSWORD', true),
+(uuid_generate_v4(), 'User 2', 'TEST_PASSWORD', false),
+(uuid_generate_v4(), 'User 3', 'TEST_PASSWORD', false),
+(uuid_generate_v4(), 'User 4', 'TEST_PASSWORD', false),
+(uuid_generate_v4(), 'User 5', 'TEST_PASSWORD', false);
 
 -- Insert 10 products
 INSERT INTO product (id, title, description, price) VALUES

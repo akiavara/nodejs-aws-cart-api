@@ -98,8 +98,9 @@ export class CartController {
 
   @UseGuards(BasicAuthGuard)
   @Get('order')
-  async getOrder(): Promise<Orders[]> {
-    return this.orderService.getAll();
+  async getOrder(@Req() req: AppRequest): Promise<Orders[]> {
+    const userId = getUserIdFromRequest(req);
+    return this.orderService.getAll(userId);
   }
 
   @UseGuards(BasicAuthGuard)

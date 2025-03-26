@@ -19,11 +19,8 @@ export class CartService {
   ) {}
 
   async findByUserId(userId: string): Promise<CartEntity> {
-    // TODO: REMOVE IT AND USE CORRECT USER_ID
-    const user_id_hardcoded = '6f1fc7a7-d12b-43fa-bacf-b42a19021c9f';
     const userCart = await this.cartRepository.findOne({
-      //where: { user_id: user_id_hardcoded },
-      where: { user: { id: user_id_hardcoded } },
+      where: { user: { id: userId } },
       relations: {
         items: {
           product: true,
@@ -35,13 +32,9 @@ export class CartService {
   }
 
   async createByUserId(user_id: string): Promise<CartEntity> {
-    console.log('createByUserId', user_id);
-    // TODO: REMOVE IT AND USE CORRECT USER_ID
-    const user_id_hardcoded = '6f1fc7a7-d12b-43fa-bacf-b42a19021c9f';
-
     // Find the user by their ID
     const user = await this.userRepository.findOne({
-      where: { id: user_id_hardcoded },
+      where: { id: user_id },
     });
 
     // If the user does not exist, throw an error
