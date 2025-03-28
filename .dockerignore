@@ -40,3 +40,6 @@ jest-e2e.config.js
 
 # Ignore other unnecessary files
 *.md
+bin
+db
+lib
