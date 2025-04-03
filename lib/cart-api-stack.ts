@@ -1,9 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
-import { DockerImageCode, DockerImageFunction } from 'aws-cdk-lib/aws-lambda';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as path from 'path';
+import * as elasticbeanstalk from 'aws-cdk-lib/aws-elasticbeanstalk';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,66 +11,201 @@ export class CartApiStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Lambda function
-    const handler = new lambda.Function(this, 'CartApiLambdaHandler', {
-      functionName: 'NestJsCartLambdaHandler_Classic',
-      runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'main.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../dist')),
-      memorySize: 1024,
-      timeout: cdk.Duration.seconds(30),
-      environment: {
-        NODE_ENV: 'production',
-        DB_HOST: process.env.DB_HOST || '',
-        DB_PORT: process.env.DB_PORT || '3306',
-        DB_NAME: process.env.DB_NAME || '',
-        DB_USERNAME: process.env.DB_USERNAME || '',
-        DB_PASSWORD: process.env.DB_PASSWORD || '',
-      },
+    // Create an S3 bucket for the application version
+    const bucket = new s3.Bucket(this, 'CartApiBucket', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
-    // Create a new lambda function
-    /*const handler = new DockerImageFunction(this, 'CartApiDockerHandler', {
-      timeout: cdk.Duration.seconds(30),
-      functionName: 'NestJsCartLambdaHandler_Docker',
-      code: DockerImageCode.fromImageAsset(path.join(__dirname, '../')), // Location of the Dockerfile
-    });*/
-
-    // Grant permissions to access RDS
-    handler.addToRolePolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['rds-db:connect', 'rds:DescribeDBInstances'],
-        resources: ['*'], // You might want to restrict this to specific RDS ARN
-      }),
+    // Deploy the Dockerrun.aws.json to S3
+    const deployment = new s3deploy.BucketDeployment(
+      this,
+      'CartApiBucketDeployment',
+      {
+        sources: [s3deploy.Source.asset('./docker-deploy')],
+        destinationBucket: bucket,
+      },
     );
 
-    // API Gateway
-    const api = new apigateway.RestApi(this, 'CartApi', {
-      restApiName: 'Cart Service',
-      description: 'Cart API service using Nest.js',
-      deploy: true,
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
+    // Create an Elastic Beanstalk application
+    const appName = 'CartApiElasticBeanstalkApp';
+    const ebApp = new elasticbeanstalk.CfnApplication(
+      this,
+      'ElasticBeanstalkApp',
+      {
+        applicationName: appName,
       },
+    );
+
+    // Create EC2 instance profile role
+    const ec2Role = new iam.Role(this, 'EC2InstanceRole', {
+      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          'AWSElasticBeanstalkWebTier',
+        ),
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          'AWSElasticBeanstalkMulticontainerDocker',
+        ),
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          'AWSElasticBeanstalkWorkerTier',
+        ),
+      ],
     });
 
-    // Integrate API Gateway with Lambda
-    const integration = new apigateway.LambdaIntegration(handler, {
-      proxy: true,
+    // Create instance profile
+    const instanceProfile = new iam.CfnInstanceProfile(
+      this,
+      'EC2InstanceProfile',
+      {
+        roles: [ec2Role.roleName],
+      },
+    );
+
+    // Add IAM role for Elastic Beanstalk service
+    const ebServiceRole = new iam.Role(this, 'ElasticBeanstalkServiceRole', {
+      assumedBy: new iam.ServicePrincipal('elasticbeanstalk.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          'service-role/AWSElasticBeanstalkEnhancedHealth',
+        ),
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          'service-role/AWSElasticBeanstalkService',
+        ),
+      ],
     });
 
-    // Add proxy resource that forwards all requests to the Lambda function
-    api.root.addProxy({
-      defaultIntegration: integration,
-      anyMethod: true,
-    });
+    // Create an application version
+    const appVersionProps = new elasticbeanstalk.CfnApplicationVersion(
+      this,
+      'AppVersion',
+      {
+        applicationName: appName,
+        sourceBundle: {
+          s3Bucket: bucket.bucketName,
+          s3Key: 'Dockerrun.aws.json',
+        },
+      },
+    );
+    appVersionProps.addDependsOn(ebApp);
+    appVersionProps.node.addDependency(deployment);
 
-    // Output the API URL
-    new cdk.CfnOutput(this, 'ApiUrl', {
-      value: api.url,
-      description: 'API Gateway URL',
-    });
+    // Create an Elastic Beanstalk environment
+    const ebEnv = new elasticbeanstalk.CfnEnvironment(
+      this,
+      'ElasticBeanstalkEnv',
+      {
+        environmentName: 'akiavara-cart-api-prod',
+        applicationName: appName,
+        solutionStackName: '64bit Amazon Linux 2 v4.1.0 running Docker',
+        versionLabel: appVersionProps.ref,
+        optionSettings: [
+          {
+            namespace: 'aws:autoscaling:launchconfiguration',
+            optionName: 'IamInstanceProfile',
+            value: instanceProfile.ref,
+          },
+          {
+            namespace: 'aws:elasticbeanstalk:environment',
+            optionName: 'ServiceRole',
+            value: ebServiceRole.roleName,
+          },
+          {
+            namespace: 'aws:autoscaling:launchconfiguration',
+            optionName: 'InstanceType',
+            value: 't2.micro',
+          },
+          {
+            namespace: 'aws:elasticbeanstalk:environment',
+            optionName: 'EnvironmentType',
+            value: 'SingleInstance',
+          },
+          {
+            namespace: 'aws:elbv2:listener:443',
+            optionName: 'Protocol',
+            value: 'HTTPS',
+          },
+          {
+            namespace: 'aws:elasticbeanstalk:environment:process:default',
+            optionName: 'Port',
+            value: '80',
+          },
+          {
+            namespace: 'aws:elasticbeanstalk:environment:process:default',
+            optionName: 'Protocol',
+            value: 'HTTP',
+          },
+          {
+            namespace: 'aws:elasticbeanstalk:docker',
+            optionName: 'LoggingDriver',
+            value: 'json-file',
+          },
+          {
+            namespace: 'aws:elasticbeanstalk:environment:proxy',
+            optionName: 'ProxyServer',
+            value: 'nginx',
+          },
+        ],
+      },
+    );
+
+    // Force PascalCase for OptionSettings using addPropertyOverride
+    ebEnv.addPropertyOverride('OptionSettings', [
+      {
+        Namespace: 'aws:elasticbeanstalk:application:environment',
+        OptionName: 'NODE_ENV',
+        Value: 'production',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:application:environment',
+        OptionName: 'DB_HOST',
+        Value: process.env.DB_HOST || '',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:application:environment',
+        OptionName: 'DB_PORT',
+        Value: process.env.DB_PORT || '5432',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:application:environment',
+        OptionName: 'DB_NAME',
+        Value: process.env.DB_NAME || '',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:application:environment',
+        OptionName: 'DB_USERNAME',
+        Value: process.env.DB_USERNAME || '',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:application:environment',
+        OptionName: 'DB_PASSWORD',
+        Value: process.env.DB_PASSWORD || '',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:application:environment',
+        OptionName: 'DOCKER_IMAGE',
+        Value: 'akiavara/cart-api:latest',
+      },
+      {
+        Namespace: 'aws:autoscaling:launchconfiguration',
+        OptionName: 'IamInstanceProfile',
+        Value: instanceProfile.ref,
+      },
+      {
+        Namespace: 'aws:autoscaling:launchconfiguration',
+        OptionName: 'InstanceType',
+        Value: 't2.micro',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:environment',
+        OptionName: 'EnvironmentType',
+        Value: 'SingleInstance',
+      },
+      {
+        Namespace: 'aws:elasticbeanstalk:environment',
+        OptionName: 'ServiceRole',
+        Value: ebServiceRole.roleName,
+      },
+    ]);
   }
 }

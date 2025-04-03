@@ -1,0 +1,25 @@
+# Ignore CDK output directory
+cdk.out
+
+# Ignore node_modules (dependencies will be installed in the container)
+node_modules
+
+# Ignore build artifacts
+dist
+build
+
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.swp
+.DS_Store
+
+# Ignore Git files
+.git
+.gitignore
+
+# Ignore IDE/editor files
+.vscode
+.idea

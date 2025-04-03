@@ -1,8 +1,12 @@
+# Ignore CDK output directory
+cdk.out
+
 # Ignore node_modules (dependencies will be installed inside the container)
 node_modules
 
 # Ignore build artifacts
 dist
+build
 
 # Ignore environment files (use Docker's --env-file or environment variables instead)
 .env

@@ -12,25 +12,21 @@ RUN npm install
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN npm run build:lambda
 
 # Prune dev dependencies
 RUN npm prune --production
 
-# Final Stage: Use Scratch
-FROM scratch
+# Final Stage: Use Alpine
+FROM node:18-alpine
 WORKDIR /app
-
-# Copy the Node.js binary from the builder stage
-COPY --from=builder /usr/local/bin/node /usr/local/bin/node
 
 # Copy only the necessary files from the builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
 
 # Expose the application port
 EXPOSE 4000
 
 # Start the application
-CMD ["/usr/local/bin/node", "dist/src/main"]
+CMD ["node", "dist/main"]
