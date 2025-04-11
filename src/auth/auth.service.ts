@@ -1,11 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/services/users.service';
-import { User } from '../users/models';
+import { Users as UsersEntity } from '../users/models/users.entity';
+import { LoginPayload, RegisterPayload } from 'src/users/type';
 // import { contentSecurityPolicy } from 'helmet';
+
 type TokenResponse = {
-  token_type: string;
-  access_token: string;
+  token: {
+    token_type: string;
+    access_token: string;
+  };
+  is_admin: boolean;
 };
 
 @Injectable()
@@ -15,52 +20,87 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  register(payload: User) {
-    const user = this.usersService.findOne(payload.name);
+  async register(payload: RegisterPayload) {
+    if (
+      !payload.password ||
+      !payload.repeatPassword ||
+      payload.password !== payload.repeatPassword
+    ) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    if (!payload.username) {
+      throw new BadRequestException('Username is required');
+    }
+
+    const user = await this.usersService.findOne(payload.username);
 
     if (user) {
       throw new BadRequestException('User with such name already exists');
     }
 
-    const { id: userId } = this.usersService.createOne(payload);
+    const { id: userId } = await this.usersService.createOne({
+      name: payload.username,
+      password: payload.password,
+    });
+
     return { userId };
   }
 
-  validateUser(name: string, password: string): User {
-    const user = this.usersService.findOne(name);
+  async validateUser(name: string, password: string): Promise<UsersEntity> {
+    const user = await this.usersService.findOne(name);
 
-    if (user) {
+    if (user && user.password === password) {
       return user;
     }
 
-    return this.usersService.createOne({ name, password });
+    return null;
   }
 
-  login(user: User, type: 'jwt' | 'basic' | 'default'): TokenResponse {
+  async login(
+    user: LoginPayload,
+    type: 'jwt' | 'basic' | 'default',
+  ): Promise<TokenResponse> {
     const LOGIN_MAP = {
-      jwt: this.loginJWT,
-      basic: this.loginBasic,
-      default: this.loginJWT,
+      jwt: (user: LoginPayload) => this.loginJWT(user),
+      basic: (user: LoginPayload) => this.loginBasic(user),
+      default: (user: LoginPayload) => this.loginJWT(user),
     };
     const login = LOGIN_MAP[type];
 
-    return login ? login(user) : LOGIN_MAP.default(user);
+    if (login) {
+      return await login(user);
+    } else {
+      return await LOGIN_MAP.default(user);
+    }
   }
 
-  loginJWT(user: User) {
-    const payload = { username: user.name, sub: user.id };
+  async loginJWT(user: LoginPayload) {
+    const userDb = await this.validateUser(user.username, user.password);
+
+    if (!userDb) {
+      throw new BadRequestException("User doesn't exists");
+    }
+
+    const payload = { username: userDb.name, sub: userDb.id };
 
     return {
-      token_type: 'Bearer',
-      access_token: this.jwtService.sign(payload),
+      token: {
+        token_type: 'Bearer',
+        access_token: this.jwtService.sign(payload),
+      },
+      is_admin: userDb.is_admin,
     };
   }
 
-  loginBasic(user: User) {
-    // const payload = { username: user.name, sub: user.id };
-    console.log(user);
+  async loginBasic(user: LoginPayload) {
+    const userDb = await this.validateUser(user.username, user.password);
 
-    function encodeUserToken(user: User) {
+    if (!userDb) {
+      throw new BadRequestException("User doesn't exists");
+    }
+
+    function encodeUserToken(user: UsersEntity) {
       const { name, password } = user;
       const buf = Buffer.from([name, password].join(':'), 'utf8');
 
@@ -68,8 +108,11 @@ export class AuthService {
     }
 
     return {
-      token_type: 'Basic',
-      access_token: encodeUserToken(user),
+      token: {
+        token_type: 'Basic',
+        access_token: encodeUserToken(userDb),
+      },
+      is_admin: userDb.is_admin,
     };
   }
 }
