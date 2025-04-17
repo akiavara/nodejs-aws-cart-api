@@ -3,7 +3,6 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/services/users.service';
 import { Users as UsersEntity } from '../users/models/users.entity';
 import { LoginPayload, RegisterPayload } from 'src/users/type';
-// import { contentSecurityPolicy } from 'helmet';
 
 type TokenResponse = {
   token: {
