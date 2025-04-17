@@ -7,6 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build:docker": "docker build -t cart-api .",
+    "build:docker:aws": "docker build --platform linux/amd64 -t akiavara/cart-api:latest .",
+    "start:docker": "docker run --env-file .env -p 4000:4000 cart-api",
     "deploy:eb": "eb deploy",
     "deploy": "npm run build:lambda && cdk deploy",
     "prebuild": "rm -rf dist",
